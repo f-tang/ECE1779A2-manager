@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<br>
+<div class="container">
+    <div class="row">
+        <form action='{{url_for("ec2_list")}}' method='get'>
+            <input class="btn btn-secondary" type='submit' value='Back' />
+        </form>
+    </div>
+
+    <br>
+    <div class="row">
+        <table class="table">
+        <tbody>
+            <tr><th>ID</th><td> {{ instance.id }}</td></tr>
+            <tr><th>Image AMI ID</th><td> {{ instance.image_id }}</td></tr>
+            <tr><th>Key Pair </th><td> {{ instance.key_name }}</td></tr>
+            <tr><th>Public IP Address</th><td>{{ instance.public_ip_address }}</td></tr>
+            <tr><th>State</th><td>{{ instance.state['Name'] }}</td></tr>
+        </tbody>
+        </table>
+    </div>
+
+
+    <div class="row">
+        <div class="col">
+            <div class="container">
+                <div class="row"><h2>CPU</h2></div>
+                <div class="row"><div id="cpu_plot" style="width:300px;height:150px"></div></div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="container">
+                <div class="row"><h2>Network In</h2></div>
+                <div class="row"><div id="net_in_plot" style="width:300px;height:150px"></div></div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="container">
+                <div class="row"> <h2>Network Out</h2></div>
+                <div class="row"><div id="net_out_plot" style="width:300px;height:150px"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        var options = {
+            series: {
+                lines: { show: true },
+                points: { show: true }
+            }
+        };
+
+
+        $.plot($("#cpu_plot"), [ {{ cpu_stats }} ] , options);
+        $.plot($("#net_in_plot"), [ {{ net_in_stats }} ] , options);
+        $.plot($("#net_out_plot"), [ {{ net_out_stats }} ] , options);
+
+    </script>
+
+</div>
+
+
+{% endblock %}

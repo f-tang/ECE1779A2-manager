@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<br>
+<div class="container">
+    <form action="{{url_for('ec2_create')}}" method="post">
+        <input class="btn btn-primary" type="submit" value="Create a new worker">
+    </form>
+
+    <br>
+    <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Type</th>
+            <th scope="col">Availability Zone</th>
+            <th scope="col">Status</th>
+        </tr>
+        </thead>
+
+        <tbody>
+        {% for instance in instances %}
+        <tr>
+            <td>{{ instance.id }}</td>
+            <td>{{ instance.instance_type }}</td>
+            <td>{{ instance.placement['AvailabilityZone']}}</td>
+            <td>{{ instance.state['Name'] }}</td>
+            <td>
+                <form action="{{url_for('ec2_view',id=instance.id)}}" method='get'>
+                    <input class="btn btn-info" type='submit' value='Details'/>
+                </form>
+            </td>
+
+            <td>
+                <form action="{{url_for('ec2_destroy',id=instance.id)}}" method='post'
+                      onsubmit='return confirm("Are you sure?")'>
+                    <input class="btn btn-danger" type='submit' value='Destroy'/>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+
+    </table>
+
+</div>
+<br>
+
+{% endblock %}
