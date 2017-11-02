@@ -22,36 +22,62 @@
     <style>
     body {
         padding-top: 56px;
+        height: 100%;
     }
-        {% block cus_style %}{% endblock %}
+    #wrap{
+        min-height: 100%;
+    }
+    #main {
+        overflow:auto;
+        padding-bottom:250px; /* this needs to be bigger than footer height*/
+    }
+    .footer {
+        position: relative;
+        margin-top: -80px; /* negative value of footer height */
+        height: 80px;
+        clear:both;
+        padding-top:20px;
+    }
+
+    {% block cus_style %}{% endblock %}
 
     </style>
 </head>
 
 <body>
-<div class="container">
-    {% if title %}
-    <h1 class="my-4 text-center text-lg-left">{{ title }}</h1>
+<div id="wrap">
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="close">
+            <span aria-hidden="true">&times;</span></button>
+        {{ message }}
+    </div>
+    {% endfor %}
     {% endif %}
+    {% endwith %}
+    <div id="main" class="container clear-top">
+        {% if title %}
+        <h1 class="my-4 text-center text-lg-left">{{ title }}</h1>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+
+    </div>
+    <!-- Bootstrap core JavaScript -->
+    <script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
+    <script src="{{url_for('static', filename='vendor/popper/popper.min.js')}}"></script>
+    <script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.min.js')}}"></script>
 </div>
-{% block content %}
-{% endblock %}
-
-
-<!-- Bootstrap core JavaScript -->
-<script src="{{url_for('static', filename='vendor/jquery/jquery.min.js')}}"></script>
-<script src="{{url_for('static', filename='vendor/popper/popper.min.js')}}"></script>
-<script src="{{url_for('static', filename='vendor/bootstrap/js/bootstrap.min.js')}}"></script>
 
 </body>
 
-<br>
-<br>
-<br>
-<br>
+
 
 <!-- Footer -->
-<footer class="py-4 bg-dark">
+<footer class="footer bg-dark">
     <div class="container">
         <p class="m-0 text-center text-white">Copyright &copy; ECE1779-A2-Manager 2017</p>
     </div>

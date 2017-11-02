@@ -2,45 +2,152 @@
 {% block content %}
 <br>
 <div class="container">
-    <form action="{{url_for('ec2_create')}}" method="post">
-        <input class="btn btn-primary" type="submit" value="Create a new worker">
+    <div class="row">
+        <div class="col">
+            <button class="btn btn-primary float-left" type="button" data-toggle="modal" data-target="#PolicyForm">
+            Modify scaling policy
+            </button>
+        </div>
+        {% if scaling_status == "off" %}
+        <div class="col">
+            <form action="{{url_for('enable_scaling')}}" method="POST">
+                <input class="btn btn-success float-right" type="submit" value="Enable auto-scaling"/>
+            </form>
+        </div>
+        {% elif scaling_status == "on" %}
+        <div class="col">
+            <form action="{{url_for('disable_scaling')}}" method="POST">
+                <input class="btn btn-danger float-right" type="submit" value="Disable auto-scaling"/>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+    {% from "_formhelper.html" import render_field %}
+    <form method="post" action="/manager/policy">
+        <div class="modal fade" id="PolicyForm" tabindex="-1" role="dialog" aria-labelledby="policy" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="policy">Modify policy</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="container">
+                            {{ form.csrf_token }}
+                            <dl>
+                                {{render_field(form.grow_shreshold)}}
+                                {{render_field(form.shrink_shreshold)}}
+                                {{render_field(form.grow_ratio)}}
+                                {{render_field(form.shrink_ratio)}}
+                            </dl>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <input class="btn btn-primary" type="submit" value=Submit>
+                    </div>
+                </div>
+            </div>
+        </div>
     </form>
-
     <br>
-    <table class="table">
-        <thead>
-        <tr>
-            <th scope="col">ID</th>
-            <th scope="col">Type</th>
-            <th scope="col">Availability Zone</th>
-            <th scope="col">Status</th>
-        </tr>
-        </thead>
+    <div class="row">
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">grow threshold</th>
+                <th scope="col">shrink threshold</th>
+                <th scope="col">grow ratio</th>
+                <th scope="col">shrink ratio</th>
+                <th scope="col">scaling status</th>
+            </tr>
+            </thead>
 
-        <tbody>
-        {% for instance in instances %}
-        <tr>
-            <td>{{ instance.id }}</td>
-            <td>{{ instance.instance_type }}</td>
-            <td>{{ instance.placement['AvailabilityZone']}}</td>
-            <td>{{ instance.state['Name'] }}</td>
-            <td>
-                <form action="{{url_for('ec2_view',id=instance.id)}}" method='get'>
-                    <input class="btn btn-info" type='submit' value='Details'/>
-                </form>
-            </td>
+            <tbody>
+            <tr>
+                <td>{{ grow_threshold }}</td>
+                <td>{{ shrink_threshold }}</td>
+                <td>{{ grow_ratio }}</td>
+                <td>{{ shrink_ratio }}</td>
+                <td>{{ scaling_status }}</td>
+            </tr>
+            </tbody>
 
-            <td>
-                <form action="{{url_for('ec2_destroy',id=instance.id)}}" method='post'
-                      onsubmit='return confirm("Are you sure?")'>
-                    <input class="btn btn-danger" type='submit' value='Destroy'/>
-                </form>
-            </td>
-        </tr>
-        {% endfor %}
-        </tbody>
+        </table>
+    </div>
+    {% if error %}
+    <br>
+    <div class="row">
+        <p class="error"><strong>Error: </strong>{{error}}</p>
+    </div>
+    {% endif %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <form action="{{url_for('ec2_create')}}" method="post">
+                <div class="form-row align-items-center">
+                    <div class="col-auto">
+                        <input class="btn btn-primary" type="submit" value="Create new workers">
+                    </div>
+                    <div class="col-auto">
+                        <label class="mr-sm-2" for="inlineFormCustomSelect">Amount: </label>
+                        <select class="Custom-select mb-2 mr-sm-2 mb-sm-0" id="inlineFormCustomSelect" name="num-create">
+                            <option>1</option>
+                            <option>2</option>
+                            <option>3</option>
+                            <option>4</option>
+                            <option>5</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="col">
+            <form action="{{url_for('clear_content')}}" method='POST'
+                  onsubmit='return confirm("Are you sure to clear all contents in database and S3?")'>
+                <input class="btn btn-danger float-right" type='submit' value='Clear Content'/>
+            </form>
+        </div>
+    </div>
+    <br>
+    <div class="row">
+        <table class="table">
+            <thead>
+            <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Type</th>
+                <th scope="col">Availability Zone</th>
+                <th scope="col">Status</th>
+            </tr>
+            </thead>
 
-    </table>
+            <tbody>
+            {% for instance in instances %}
+                <tr>
+                    <td>{{ instance.id }}</td>
+                    <td>{{ instance.instance_type }}</td>
+                    <td>{{ instance.placement['AvailabilityZone']}}</td>
+                    <td>{{ instance.state['Name'] }}</td>
+                    <td>
+                        <form action="{{url_for('ec2_view',id=instance.id)}}" method='get'>
+                            <input class="btn btn-info" type='submit' value='Details'/>
+                        </form>
+                    </td>
+                    <td>
+                        <form action="{{url_for('ec2_destroy',id=instance.id)}}" method='post'
+                              onsubmit='return confirm("Are you sure?")'>
+                            <input class="btn btn-danger" type='submit' value='Destroy'/>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+
+        </table>
+    </div>
+
 
 </div>
 <br>
