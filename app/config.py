@@ -1,7 +1,6 @@
 db_config = {'user': 'ece1779',
              'password': 'secret',
-             # 'host': '172.31.85.72',
-             'host': '127.0.0.1',
+             'host': '172.31.85.72',
              'database': 'ece1779'}
 
 ami_id = "ami-26248a5c"
