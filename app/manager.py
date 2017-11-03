@@ -8,6 +8,7 @@ from pymysql import escape_string
 
 from datetime import datetime, timedelta
 from operator import itemgetter
+from celery.task import periodic_task
 import re
 import subprocess
 
@@ -87,8 +88,8 @@ def ec2_list():
             shrink_ratio = 'N/A'
             scaling_status = 'off'
         else:
-            grow_threshold = int(policy[1]) / 100
-            shrink_threshold = int(policy[2]) / 100
+            grow_threshold = int(policy[1])
+            shrink_threshold = int(policy[2])
             grow_ratio = int(policy[3])
             shrink_ratio = int(policy[4])
             if int(policy[5]) == 0:
@@ -102,7 +103,8 @@ def ec2_list():
         #        Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])
 
         instances = ec2.instances.filter(
-            Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']}])
+            Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
+                     {'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
         form = ScalingForm()
         return render_template("list.html", title="EC2 Manager", form=form, instances=instances,
@@ -331,6 +333,7 @@ def clear_content():
         cnx.commit()
         cursor.close()
         cnx.close()
+        flash("All data is eliminated")
         return redirect(url_for('ec2_list'))
 
     except Exception as e:

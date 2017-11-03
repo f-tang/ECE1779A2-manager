@@ -1,25 +1,25 @@
-from flask import g
 import pymysql.cursors
 import boto3
 import random
 from datetime import datetime, timedelta
 from operator import itemgetter
 import numpy as np
+import time
 import gc
 
 from botocore.client import Config
 
-ami_id = "ami-26248a5c"
+ami_id = "ami-1a833660"
 sg_ids = ["sg-85770ff7", "sg-04b99e76"]
-
 
 # access database
 def connect_to_database():
     return pymysql.connect(
-        host='127.0.0.1',
-        user='ece1779',
-        password='secret',
-        db='ece1779')
+        host = '127.0.0.1',
+        # host = '172.31.85.72',
+        user ='ece1779',
+        password ='secret',
+        db ='ece1779')
 
 
 # access aws ec2 resource
@@ -91,6 +91,7 @@ def get_utl():
 
     for ins in instances:
         cpu_status = get_cpu_stats(ins.id)
+
         if len(cpu_status) > 0:
             cpu = cpu_status[-1][1]
             cpu_list.append(cpu)
@@ -101,9 +102,11 @@ def get_utl():
 
 def get_cpu_stats(instance_id):
     ec2 = get_ec2resource()
-    instance = ec2.Instance(id)
+    instance = ec2.Instance(instance_id)
 
-    client = boto3.client('cloudwatch')
+    client = get_CWclient()
+
+    #client = boto3.client('cloudwatch')
 
     metric_name = 'CPUUtilization'
 
@@ -124,7 +127,6 @@ def get_cpu_stats(instance_id):
         Statistics=[statistic],
         Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}]
     )
-
     cpu_stats = []
 
     for point in cpu['Datapoints']:
@@ -169,6 +171,7 @@ def main():
             return 0
 
         num_worker = get_worker_num()
+
         if num_worker < 1:
             # no worker, create one
             ec2_create(1)
@@ -179,12 +182,15 @@ def main():
             print("worker pool is full")
             return 0
 
-        grow_threshold = int(policy[1]) / 100
-        shrink_threshold = int(policy[2]) / 100
+        grow_threshold = float(int(policy[1]))
+        shrink_threshold = float(int(policy[2]))
         grow_ratio = int(policy[3])
         shrink_ratio = int(policy[4])
 
-        cpu_utl = get_utl() # TODO: make sure cpu_utl is a float(0~1)
+
+        cpu_utl = get_utl() # TODO: make sure cpu_utl is a float(0~100)
+        print('average cpu utl is: ', cpu_utl)
+#        print(grow_threshold,shrink_threshold,grow_ratio,shrink_ratio)
 
         if cpu_utl > grow_threshold:
             num_create = min([num_worker * grow_ratio, MAX_POOL-num_worker])
@@ -206,4 +212,6 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    while(True):
+        main()
+        time.sleep(10)

@@ -4,6 +4,6 @@ db_config = {'user': 'ece1779',
              'host': '127.0.0.1',
              'database': 'ece1779'}
 
-ami_id = "ami-26248a5c"
+ami_id = "ami-1a833660"
 
 sg_ids= ["sg-85770ff7", "sg-04b99e76"]
