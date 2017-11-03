@@ -65,7 +65,7 @@ class ScalingForm(FlaskForm):
                                      validators.number_range(min=1, max=100, message="Input an integer from 1 to 100")])
     grow_ratio = IntegerField('Grow Ratio',
                               [validators.DataRequired(),
-                               validators.number_range(min=1, max=5, message="Input an integer from 1 to 5")])
+                               validators.number_range(min=2, max=5, message="Input an integer from 2 to 5")])
     shrink_ratio = IntegerField('Shrink Ratio',
                                 [validators.DataRequired(),
                                  validators.number_range(min=2, max=10, message="Input an integer from 2 to 10")])
@@ -87,8 +87,8 @@ def ec2_list():
             shrink_ratio = 'N/A'
             scaling_status = 'off'
         else:
-            grow_threshold = int(policy[1]) / 100;
-            shrink_threshold = int(policy[2]) / 100;
+            grow_threshold = int(policy[1]) / 100
+            shrink_threshold = int(policy[2]) / 100
             grow_ratio = int(policy[3])
             shrink_ratio = int(policy[4])
             if int(policy[5]) == 0:
@@ -127,10 +127,12 @@ def policy_modify():
 
         if not form.validate_on_submit():
             error = "request is invalid"
+            flash("error: input number invalid")
             return redirect(url_for('ec2_list', error=error))
 
         if int(form.grow_shreshold.data) <= int(form.shrink_shreshold.data):
-            error = "grow shreshould must be greater than shrink shreshold"
+            error = "grow shreshold must be greater than shrink shreshold"
+            flash("error: grow shreshold must be greater than shrink shreshold")
             return redirect(url_for('ec2_list', error=error))
 
         grow_shreshold = form.grow_shreshold.data
