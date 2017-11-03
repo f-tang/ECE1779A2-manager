@@ -167,7 +167,7 @@ def main():
         scaling_status = int(policy[5])
         if scaling_status == 0:
             # auto-scaling is off, do nothing
-            print("auto-scaling is off, you can switch on in manager UI")
+            print("auto-scaling is off, you can switch on via manager UI")
             return 0
 
         num_worker = get_worker_num()
