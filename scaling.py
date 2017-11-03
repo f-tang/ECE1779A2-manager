@@ -1,6 +1,10 @@
 from flask import g
 import pymysql.cursors
 import boto3
+import random
+from operator import itemgetter
+import numpy as np
+
 from botocore.client import Config
 
 ami_id = "ami-26248a5c"
@@ -77,18 +81,77 @@ def ec2_create(num_create):
 
 # TODO: delete ec2 instances
 def ec2_delete(num_delete):
+    ec2 = get_ec2resource()
+    workers = list(ec2.instances.filter(
+        Filters= [{'Key': 'type', 'Value': 'ece1779worker'},
+                  {'Key': 'instance-state-name', 'Values': ['running', 'pending']}]))
 
+    random.shuffle(workers)
+    for i in range(num_delete):
+            workers[i].terminate()
     return 0
 
 # TODO: get EC2 average CPU utilization
 def get_utl():
-    average_utl = 0
+    ec2 = get_ec2resource()
+    instances = ec2.instances.filter(
+        Filters= [{'Key': 'type', 'Value': 'ece1779worker'},
+                  {'Key': 'instance-state-name', 'Values': ['running', 'pending']}])
+
+    cpu_list = []
+
+    for ins in instances:
+        cpu_status = get_cpu_stats(ins.id)
+        if len(cpu_status) > 0:
+            cpu = cpu_status[-1][1]
+            cpu_list.append(cpu)
+
+    average_utl = np.mean(cpu_list)
 
     return average_utl
 
+def get_cpu_stats(instance_id):
+    client = boto3.client('cloudwatch')
+
+    metric_name = 'CPUUtilization'
+
+    #    CPUUtilization, NetworkIn, NetworkOut, NetworkPacketsIn,
+    #    NetworkPacketsOut, DiskWriteBytes, DiskReadBytes, DiskWriteOps,
+    #    DiskReadOps, CPUCreditBalance, CPUCreditUsage, StatusCheckFailed,
+    #    StatusCheckFailed_Instance, StatusCheckFailed_System
+
+    namespace = 'AWS/EC2'
+    statistic = 'Average'  # could be Sum,Maximum,Minimum,SampleCount,Average
+
+    cpu = client.get_metric_statistics(
+        Period=1 * 60,
+        StartTime=datetime.utcnow() - timedelta(seconds=60 * 60),
+        EndTime=datetime.utcnow() - timedelta(seconds=0 * 60),
+        MetricName=metric_name,
+        Namespace=namespace,  # Unit='Percent',
+        Statistics=[statistic],
+        Dimensions=[{'Name': 'InstanceId', 'Value': instance_id}]
+    )
+
+    cpu_stats = []
+
+    for point in cpu['Datapoints']:
+        hour = point['Timestamp'].hour
+        minute = point['Timestamp'].minute
+        time = hour + minute / 60
+        cpu_stats.append([time, point['Average']])
+
+    return sorted(cpu_stats, key=itemgetter(0))
+
+
 # TODO: get number of EC2 worker instances
 def get_worker_num():
-    num_worker = 0
+    ec2 = get_ec2resource()
+    instances = ec2.instances.filter(
+        Filters=[{'Key': 'type', 'Value': 'ece1779worker'},
+                 {'Key': 'instance-state-name', 'Values': ['running', 'pending']}])
+    num_worker = len(instances)
+
     return num_worker
 
 
