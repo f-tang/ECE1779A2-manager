@@ -15,8 +15,8 @@ sg_ids = ["sg-85770ff7", "sg-04b99e76"]
 # access database
 def connect_to_database():
     return pymysql.connect(
-        host = '127.0.0.1',
-        # host = '172.31.85.72',
+        # host = '127.0.0.1',
+        host = '172.31.85.72',
         user ='ece1779',
         password ='secret',
         db ='ece1779')
