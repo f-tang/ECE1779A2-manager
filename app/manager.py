@@ -57,16 +57,16 @@ def get_ELBclient():
 
 # define scaling policy form
 class ScalingForm(FlaskForm):
-    grow_shreshold = IntegerField('Grow Shreshold',
+    grow_shreshold = IntegerField('Grow Shreshold (1~100)',
                                   [validators.DataRequired(),
                                    validators.number_range(min=1, max=100, message="Input an integer from 1 to 100")])
-    shrink_shreshold = IntegerField('Shrink Shreshold',
+    shrink_shreshold = IntegerField('Shrink Shreshold (1~100)',
                                     [validators.DataRequired(),
                                      validators.number_range(min=1, max=100, message="Input an integer from 1 to 100")])
-    grow_ratio = IntegerField('Grow Ratio',
+    grow_ratio = IntegerField('Grow Ratio (2~5)',
                               [validators.DataRequired(),
                                validators.number_range(min=2, max=5, message="Input an integer from 2 to 5")])
-    shrink_ratio = IntegerField('Shrink Ratio',
+    shrink_ratio = IntegerField('Shrink Ratio (2~10)',
                                 [validators.DataRequired(),
                                  validators.number_range(min=2, max=10, message="Input an integer from 2 to 10")])
 

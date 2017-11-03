@@ -2,8 +2,10 @@ from flask import g
 import pymysql.cursors
 import boto3
 import random
+from datetime import datetime, timedelta
 from operator import itemgetter
 import numpy as np
+import gc
 
 from botocore.client import Config
 
@@ -13,24 +15,11 @@ sg_ids = ["sg-85770ff7", "sg-04b99e76"]
 
 # access database
 def connect_to_database():
-    return pymysql.connect(host='127.0.0.1',
-                           user='ece1779',
-                           password='secret',
-                           db='ece1779')
-
-
-def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._databse = connect_to_database()
-    return db
-
-
-# database exception teardown
-def teardown_db(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+    return pymysql.connect(
+        host='127.0.0.1',
+        user='ece1779',
+        password='secret',
+        db='ece1779')
 
 
 # access aws ec2 resource
@@ -83,8 +72,8 @@ def ec2_create(num_create):
 def ec2_delete(num_delete):
     ec2 = get_ec2resource()
     workers = list(ec2.instances.filter(
-        Filters= [{'Key': 'type', 'Value': 'ece1779worker'},
-                  {'Key': 'instance-state-name', 'Values': ['running', 'pending']}]))
+        Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
+                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}]))
 
     random.shuffle(workers)
     for i in range(num_delete):
@@ -95,8 +84,8 @@ def ec2_delete(num_delete):
 def get_utl():
     ec2 = get_ec2resource()
     instances = ec2.instances.filter(
-        Filters= [{'Key': 'type', 'Value': 'ece1779worker'},
-                  {'Key': 'instance-state-name', 'Values': ['running', 'pending']}])
+        Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
+                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
 
     cpu_list = []
 
@@ -111,6 +100,9 @@ def get_utl():
     return average_utl
 
 def get_cpu_stats(instance_id):
+    ec2 = get_ec2resource()
+    instance = ec2.Instance(id)
+
     client = boto3.client('cloudwatch')
 
     metric_name = 'CPUUtilization'
@@ -148,9 +140,9 @@ def get_cpu_stats(instance_id):
 def get_worker_num():
     ec2 = get_ec2resource()
     instances = ec2.instances.filter(
-        Filters=[{'Key': 'type', 'Value': 'ece1779worker'},
-                 {'Key': 'instance-state-name', 'Values': ['running', 'pending']}])
-    num_worker = len(instances)
+        Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
+                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+    num_worker = len(list(instances))
 
     return num_worker
 
@@ -158,16 +150,7 @@ def get_worker_num():
 def main():
     MAX_POOL = 10
     try:
-        num_worker = get_worker_num()
-        if num_worker < 1:
-            # no worker, create one
-            ec2_create(1)
-            return 0
-        if num_worker > MAX_POOL:
-            # full worker pool, do nothing
-            return 0
-
-        cnx = get_db()
+        cnx = connect_to_database()
         cursor = cnx.cursor()
         cursor.execute("SELECT * FROM policy")
         policy = cursor.fetchone()
@@ -185,6 +168,17 @@ def main():
             print("auto-scaling is off, you can switch on in manager UI")
             return 0
 
+        num_worker = get_worker_num()
+        if num_worker < 1:
+            # no worker, create one
+            ec2_create(1)
+            print("initialization success, created 1 worker")
+            return 0
+        if num_worker > MAX_POOL:
+            # full worker pool, do nothing
+            print("worker pool is full")
+            return 0
+
         grow_threshold = int(policy[1]) / 100
         shrink_threshold = int(policy[2]) / 100
         grow_ratio = int(policy[3])
@@ -192,17 +186,22 @@ def main():
 
         cpu_utl = get_utl() # TODO: make sure cpu_utl is a float(0~1)
 
-        if cpu_utl < grow_threshold:
+        if cpu_utl > grow_threshold:
             num_create = min([num_worker * grow_ratio, MAX_POOL-num_worker])
             ec2_create(num_create)
-        elif cpu_utl > shrink_threshold:
+            print("created %d worker(s)" % (num_create))
+        elif cpu_utl < shrink_threshold:
             num_delete = min([num_worker - num_worker // shrink_ratio, num_worker - 1])
+            print("deleted %d worker(s)" % (num_delete))
             ec2_delete(num_delete)
+        else:
+            print("do nothing")
 
+        gc.collect()
         return 0
 
     except Exception as e:
-        teardown_db(e)
+        gc.collect()
         print(str(e))
 
 
