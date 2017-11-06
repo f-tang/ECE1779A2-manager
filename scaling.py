@@ -9,7 +9,7 @@ import gc
 
 from botocore.client import Config
 
-ami_id = "ami-0e6ddb74"
+ami_id = "ami-9a00b1e0"
 sg_ids = ["sg-85770ff7", "sg-04b99e76"]
 
 # access database
@@ -128,7 +128,7 @@ def get_cpu_stats(instance_id):
 
     cpu = client.get_metric_statistics(
         Period=1 * 60,
-        StartTime=datetime.utcnow() - timedelta(seconds= 5 * 60),
+        StartTime=datetime.utcnow() - timedelta(seconds= 10 * 60),
         EndTime=datetime.utcnow() - timedelta(seconds=0 * 60),
         MetricName=metric_name,
         Namespace=namespace,  # Unit='Percent',

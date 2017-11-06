@@ -323,14 +323,16 @@ def clear_content():
         cnx = get_db()
         cursor = cnx.cursor()
         cursor.execute("DELETE FROM trimages")
+        cnx.commit()
         cursor.execute("DELETE FROM images")
+        cnx.commit()
         cursor.execute("DELETE FROM users")
+        cnx.commit()
 
         s3 = get_s3bucket()
         for obj in s3.objects.filter(Prefix='images/'):
             obj.delete()
 
-        cnx.commit()
         cursor.close()
         cnx.close()
         flash("All data is eliminated")
