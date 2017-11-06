@@ -9,7 +9,7 @@ import gc
 
 from botocore.client import Config
 
-ami_id = "ami-1a833660"
+ami_id = "ami-0e6ddb74"
 sg_ids = ["sg-85770ff7", "sg-04b99e76"]
 
 # access database
@@ -45,6 +45,10 @@ def get_ELBclient():
 
 # create ec2 instances
 def ec2_create(num_create):
+    if num_create == 0:
+        print("worker pool is full")
+        return 0
+
     ec2 = get_ec2resource()
     instances = ec2.create_instances(ImageId=ami_id,
                                      InstanceType='t2.small',
@@ -70,10 +74,14 @@ def ec2_create(num_create):
 
 # TODO: delete ec2 instances
 def ec2_delete(num_delete):
+    if num_delete == 0:
+        print("do nothing")
+        return 0
+
     ec2 = get_ec2resource()
     workers = list(ec2.instances.filter(
         Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
-                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}]))
+                 {'Name': 'instance-state-name', 'Values': ['running']}]))
 
     random.shuffle(workers)
     for i in range(num_delete):
@@ -85,7 +93,7 @@ def get_utl():
     ec2 = get_ec2resource()
     instances = ec2.instances.filter(
         Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
-                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+                 {'Name': 'instance-state-name', 'Values': ['running']}])
 
     cpu_list = []
 
@@ -120,7 +128,7 @@ def get_cpu_stats(instance_id):
 
     cpu = client.get_metric_statistics(
         Period=1 * 60,
-        StartTime=datetime.utcnow() - timedelta(seconds=60 * 60),
+        StartTime=datetime.utcnow() - timedelta(seconds= 5 * 60),
         EndTime=datetime.utcnow() - timedelta(seconds=0 * 60),
         MetricName=metric_name,
         Namespace=namespace,  # Unit='Percent',
@@ -143,7 +151,7 @@ def get_worker_num():
     ec2 = get_ec2resource()
     instances = ec2.instances.filter(
         Filters=[{'Name': 'tag:type', 'Values': ['ece1779worker']},
-                 {'Name': 'instance-state-name', 'Values': ['running', 'pending']}])
+                 {'Name': 'instance-state-name', 'Values': ['running']}])
     num_worker = len(list(instances))
 
     return num_worker
@@ -168,6 +176,8 @@ def main():
         if scaling_status == 0:
             # auto-scaling is off, do nothing
             print("auto-scaling is off, you can switch on via manager UI")
+            cursor.close()
+            cnx.close()
             return 0
 
         num_worker = get_worker_num()
@@ -176,10 +186,14 @@ def main():
             # no worker, create one
             ec2_create(1)
             print("initialization success, created 1 worker")
+            cursor.close()
+            cnx.close()
             return 0
         if num_worker > MAX_POOL:
             # full worker pool, do nothing
             print("worker pool is full")
+            cursor.close()
+            cnx.close()
             return 0
 
         grow_threshold = float(int(policy[1]))
@@ -193,9 +207,10 @@ def main():
 #        print(grow_threshold,shrink_threshold,grow_ratio,shrink_ratio)
 
         if cpu_utl > grow_threshold:
-            num_create = min([num_worker * grow_ratio, MAX_POOL-num_worker])
-            ec2_create(num_create)
+            num_create = min([num_worker * grow_ratio, max([0,MAX_POOL-num_worker])])
             print("created %d worker(s)" % (num_create))
+            ec2_create(num_create)
+
         elif cpu_utl < shrink_threshold:
             num_delete = min([num_worker - num_worker // shrink_ratio, num_worker - 1])
             print("deleted %d worker(s)" % (num_delete))
@@ -203,6 +218,8 @@ def main():
         else:
             print("do nothing")
 
+        cursor.close()
+        cnx.close()
         gc.collect()
         return 0
 
@@ -214,4 +231,4 @@ def main():
 if __name__ == '__main__':
     while(True):
         main()
-        time.sleep(10)
+        time.sleep(60)
