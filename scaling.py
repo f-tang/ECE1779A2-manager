@@ -189,12 +189,7 @@ def main():
             cursor.close()
             cnx.close()
             return 0
-        if num_worker > MAX_POOL:
-            # full worker pool, do nothing
-            print("worker pool is full")
-            cursor.close()
-            cnx.close()
-            return 0
+
 
         grow_threshold = float(int(policy[1]))
         shrink_threshold = float(int(policy[2]))
