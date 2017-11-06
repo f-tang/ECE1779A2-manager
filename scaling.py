@@ -105,7 +105,7 @@ def get_utl():
             cpu_list.append(cpu)
     if len(cpu_list)==0:
         return 0
-    
+
     average_utl = np.mean(cpu_list)
 
     return average_utl
@@ -130,7 +130,7 @@ def get_cpu_stats(instance_id):
 
     cpu = client.get_metric_statistics(
         Period=1 * 60,
-        StartTime=datetime.utcnow() - timedelta(seconds= 5 * 60),
+        StartTime=datetime.utcnow() - timedelta(seconds= 60 * 60),
         EndTime=datetime.utcnow() - timedelta(seconds=0 * 60),
         MetricName=metric_name,
         Namespace=namespace,  # Unit='Percent',
@@ -139,10 +139,6 @@ def get_cpu_stats(instance_id):
     )
 
     cpu_stats = []
-    print(cpu)
-    print(cpu['Datapoints'])
-    if cpu['Datapoints'] is None:
-        return 0
 
     for point in cpu['Datapoints']:
 
